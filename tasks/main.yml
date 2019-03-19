@@ -1,0 +1,29 @@
+---
+
+- name: Install Dnsmasq packages
+  package:
+    name: dnsmasq
+    state: present
+
+- name: Remove unused Dnsmasq config
+  file:
+    path: "/etc/dnsmasq.d/{{ item.priority + '-' + item.name }}"
+    state: absent
+  when: item.name and item.state == 'absent'
+  loop: "{{ dnsmasq_config }}"
+  notify: restart dnsmasq
+
+- name: Set Dnsmasq config
+  template:
+    src: etc_dnsmasq.d_config.conf.j2
+    dest: "/etc/dnsmasq.d/{{ item.priority + '-' + item.name }}"
+    validate: dnsmasq --test -C %s
+  when: item.name and item.state == 'present'
+  loop: "{{ dnsmasq_config }}"
+  notify: restart dnsmasq
+
+- name: Start and enable dnsmasq service
+  service:
+    name: dnsmasq
+    state: started
+    enabled: true
